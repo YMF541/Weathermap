@@ -1,0 +1,11 @@
+{
+  "name": "yunnan-weather-map",
+  "version": "1.0.0",
+  "description": "云南旅游气象看板",
+  "main": "index.html",
+  "dependencies": {
+    "node-fetch": "^2.6.7"
+  },
+  "author": "",
+  "license": "ISC"
+}
