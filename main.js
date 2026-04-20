@@ -95,6 +95,35 @@ async function getAIOutfit(city, weather, temp) {
     }
 }
 
+async function getAIFood(city) {
+    const foodContent = document.getElementById('foodContent');
+    if (!foodContent) return;
+
+    foodContent.innerHTML = `<div style="text-align:center; padding:15px; color:#3b82f6;">⏳ 正在呼叫 AI 获取美食推荐...</div>`;
+
+    try {
+        const cityName = city.replace(/市|区|县/g, '');
+        const response = await fetch('/api/food', {
+            method: 'POST',
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ city: cityName })
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            // ... 原有的成功渲染代码 ...
+        } else {
+            // 显示后端返回的具体错误
+            foodContent.innerHTML = `<p style="color:#ef4444; text-align:center; padding:15px;">获取失败：${data.error || '未知错误'}</p>`;
+        }
+    } catch (err) {
+        // 网络错误或解析 JSON 失败
+        foodContent.innerHTML = `<p style="color:#ef4444; text-align:center; padding:15px;">网络请求失败：${err.message}</p>`;
+        console.error('美食请求错误：', err);
+    }
+}
+
 // ==========================================
 // 4. 数据获取与面板更新逻辑
 // ==========================================
@@ -263,34 +292,7 @@ function updateMainPanel(standardName, w) {
 }
 
 // 获取AI美食推荐
-async function getAIFood(city) {
-    const foodContent = document.getElementById('foodContent');
-    if (!foodContent) return;
 
-    foodContent.innerHTML = `<div style="text-align:center; padding:15px; color:#3b82f6;">⏳ 正在呼叫 AI 获取美食推荐...</div>`;
-
-    try {
-        const cityName = city.replace(/市|区|县/g, '');
-        const response = await fetch('/api/food', {
-            method: 'POST',
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ city: cityName })
-        });
-
-        const data = await response.json();
-
-        if (data.success) {
-            // ... 原有的成功渲染代码 ...
-        } else {
-            // 显示后端返回的具体错误
-            foodContent.innerHTML = `<p style="color:#ef4444; text-align:center; padding:15px;">获取失败：${data.error || '未知错误'}</p>`;
-        }
-    } catch (err) {
-        // 网络错误或解析 JSON 失败
-        foodContent.innerHTML = `<p style="color:#ef4444; text-align:center; padding:15px;">网络请求失败：${err.message}</p>`;
-        console.error('美食请求错误：', err);
-    }
-}
 
 // ==========================================
 // 5. 地图初始化与渲染交互
