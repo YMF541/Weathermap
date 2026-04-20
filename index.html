@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>云南省实时天气地图系统</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="config.js"></script>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="header-left">
+                <span>🌤️</span>
+                <h1>云南旅游气象看板V3.0</h1>
+            </div>
+            <div class="header-right">
+                <div id="currentDate"></div>
+                <div class="theme-switcher">
+                    <button id="themeBtn" class="theme-btn">🎨 主题切换</button>
+                    <div id="themeMenu" class="theme-menu">
+                        <div class="theme-option" data-theme="normal">普通风 (默认)</div>
+                        <div class="theme-option" data-theme="girl">少女风（面板风格）</div>
+                        <div class="theme-option" data-theme="hard">硬汉风（面板风格）</div>
+                        <hr class="theme-divider">
+                        <div class="opacity-control">
+                            <div class="opacity-label">左右面板透明度</div>
+                            <input type="range" id="opacitySlider" min="0" max="100" value="80">
+                            <div class="opacity-value" id="opacityValue">80%</div>
+                        </div>
+                        <hr class="theme-divider">
+                        <div class="theme-option" id="customWallpaperBtn">静态壁纸</div>
+                        <div class="theme-option" id="dynamicWallpaperBtn">动态壁纸</div>
+                        <div class="theme-option" id="resetWallpaperBtn">重置壁纸</div>
+                    </div>
+                </div>
+                <input type="file" id="wallpaperInput" accept="image/*" style="display: none;">
+                <input type="file" id="dynamicWallpaperInput" accept="image/gif,video/mp4" style="display: none;">
+                
+                <!-- 动态壁纸控制按钮 -->
+                <div id="wallpaperControls" class="wallpaper-controls" style="display: none;">
+                    <button id="playPauseBtn" class="control-btn">⏸️</button>
+                    <button id="muteBtn" class="control-btn">🔇</button>
+                </div>
+            </div>
+        </div>
+        
+        <div id="alertBar" class="alert-bar" style="display: none;">
+            <span class="alert-icon">⚠️ 天气预警</span>
+            <marquee id="alertText" behavior="scroll" direction="left" scrollamount="5"></marquee>
+        </div>
+        
+        <div class="main-content">
+            <div class="left-panel">
+                <div class="card spots-panel">
+                    <h3 class="card-title">🏞️ 必去景点 (当季推荐)</h3>
+                    <div id="spotsContent">
+                        <p style="text-align:center; opacity:0.5; padding:20px;">点击地图查看景点</p>
+                    </div>
+                </div>
+                
+                <div class="card ai-outfit-panel">
+                    <h3 class="card-title">🤖 Qwen AI 穿搭建议</h3>
+                    <div id="aiOutfitContent">
+                        <p style="font-size:13px; color:#6b7280; text-align:center; padding:20px;">点击城市，AI 将结合实况天气为您生成穿搭建议...</p>
+                    </div>
+                </div>
+
+                <div class="card food-panel">
+                    <h3 class="card-title">🍜 特色美食推荐</h3>
+                    <div id="foodContent">
+                        <p style="font-size:13px; color:#6b7280; text-align:center; padding:20px;">点击地图上的城市地名，获取本地特色美食推荐...</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="map-container">
+                <div class="layer-selector">
+                    <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
+                        <label style="font-size: 13px; color: #333; font-weight: bold;">显示地名</label>
+                        <label class="switch">
+                            <input type="checkbox" id="cityLabelsToggle" checked>
+                            <span class="slider round"></span>
+                        </label>
+                    </div>
+                    <select onchange="changeMapLayer(this.value)">
+                        <option value="standard">标准地图</option>
+                        <option value="satellite">卫星影像</option>
+                    </select>
+                </div>
+                <div id="map"></div>
+                <div class="temp-legend">
+                    <div class="legend-title">温度 (℃)</div>
+                    <div class="legend-items">
+                        <div class="legend-item"><span style="background:#ef4444"></span> &gt;30</div>
+                        <div class="legend-item"><span style="background:#f97316"></span> 25-30</div>
+                        <div class="legend-item"><span style="background:#fcd34d"></span> 18-25</div>
+                        <div class="legend-item"><span style="background:#60a5fa"></span> 10-18</div>
+                        <div class="legend-item"><span style="background:#93c5fd"></span> &lt;10</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="right-panel">
+                <div class="card weather-card">
+                    <div class="card-header-flex">
+                        <div>
+                            <div id="cityNameDisplay" style="font-size: 20px; font-weight: bold;">云南省</div>
+                            <div id="tempRangeDisplay" style="font-size: 13px; opacity: 0.8; margin: 5px 0;">等待实况数据...</div>
+                            <div style="font-size: 40px; font-weight: bold; margin-top:10px;">
+                                <span id="currentTempDisplay">--℃</span>
+                                <span id="weatherIconDisplay">🌤️</span>
+                            </div>
+                        </div>
+                        <div class="status-badge" id="dataStatus">同步中</div>
+                    </div>
+                    
+                    <div class="weather-grid">
+                        <div class="grid-item">
+                            <span class="label">湿度</span>
+                            <span class="value">💧 <span id="humidity">--</span>%</span>
+                        </div>
+                        <div class="grid-item">
+                            <span class="label">风速</span>
+                            <span class="value">💨 <span id="windSpeed">--</span>级</span>
+                        </div>
+                        <div class="grid-item">
+                            <span class="label">风向</span>
+                            <span class="value">🧭 <span id="windDir">--</span></span>
+                        </div>
+                    </div>
+                    
+                    <div class="forecast-section">
+                        <div class="section-title">未来天气预报</div>
+                        <div class="forecast-container" id="forecastContainer"></div>
+                    </div>
+
+                    <div class="action-btns">
+                        <button class="btn" id="recommendBtn">🎲 随机推荐</button>
+                        <button class="btn" id="routeBtn">🗺️ 路线规划</button>
+                    </div>
+                </div>
+                
+                <div class="card route-panel" id="routePanel">
+                    <h3 class="card-title">🗺️ 驾车导航</h3>
+                    <input type="text" id="origin" placeholder="起点" class="route-input">
+                    <input type="text" id="destination" placeholder="终点" class="route-input">
+                    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
+                        <label style="font-size: 13px; color: #6b7280;">路径天气</label>
+                        <label class="switch">
+                            <input type="checkbox" id="weatherPathToggle" checked>
+                            <span class="slider round"></span>
+                        </label>
+                    </div>
+                    <button class="btn btn-primary" id="searchRoute" style="width:100%">开始规划</button>
+                    <div id="routeOptions"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script src="main.js"></script>
+</body>
+</html>
